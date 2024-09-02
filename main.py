@@ -1,7 +1,7 @@
 import os
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
-from chatgpt_module import ChatGPT
+from llm import ChatGPT
 
 # Load the API token from the environment variable
 API_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
