@@ -1,4 +1,3 @@
-# llm.py
 from openai import OpenAI
 from pydantic import BaseModel
 import os
@@ -14,26 +13,26 @@ class ChatGPT:
         self.client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
     def extract_zoom_info(self, image_url):
-        completion = self.client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": "Please extract the Zoom meeting ID and passcode from this image."},
-                        {
-                            "type": "image_url",
-                            "image_url": {"url": image_url},
-                        },
-                    ],
-                }
-            ],
-            max_tokens=300,
-        )
-        return completion.choices[0]['message']['content']
-
-    def parse_zoom_info(self, zoom_info_text):
+        print(f"Sending image to GPT-4o-Mini: {image_url}")
         try:
-            return ZoomInfo.parse_raw(zoom_info_text)
+            completion = self.client.beta.chat.completions.parse(
+                model="gpt-4o-mini",
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": "Please extract the Zoom meeting ID and passcode from this image."},
+                            {
+                                "type": "image_url",
+                                "image_url": {"url": image_url},
+                            },
+                        ],
+                    }
+                ],
+                response_format=ZoomInfo,
+            )
+            return completion.choices[0].message.parsed
         except Exception as e:
-            raise ValueError(f"Error parsing Zoom info: {str(e)}")
+            print(f"Error during GPT-4o-Mini completion: {str(e)}")
+            raise
+

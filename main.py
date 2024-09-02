@@ -1,4 +1,3 @@
-# main.py
 import os
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
@@ -15,15 +14,17 @@ async def start(update: Update, context: CallbackContext) -> None:
     await update.message.reply_text('Hello! I am your ZoomLinkBot. Send me an image of a Zoom invite to extract the meeting link.')
 
 async def handle_image(update: Update, context: CallbackContext) -> None:
+    print("Received an image.")
     if update.message.photo:
         # Get the largest image file (highest resolution)
         file = await update.message.photo[-1].get_file()
         image_url = file.file_path
+        print(f"Image URL: {image_url}")
 
         # Use ChatGPT to extract and parse the Zoom link information
         try:
-            zoom_info_text = chatgpt.extract_zoom_info(image_url)
-            zoom_info = chatgpt.parse_zoom_info(zoom_info_text)
+            zoom_info = chatgpt.extract_zoom_info(image_url)
+            print(f"Extracted Zoom Info: {zoom_info}")
 
             # Create a clickable Zoom link
             clickable_link = f"[Join Zoom Meeting]({zoom_info.join_url})"
@@ -32,14 +33,16 @@ async def handle_image(update: Update, context: CallbackContext) -> None:
                 f"Passcode: {zoom_info.passcode}\n"
                 f"{clickable_link}"
             )
+            print(f"Response Message: {response_message}")
         except Exception as e:
             response_message = f"Could not extract Zoom information. Error: {str(e)}"
+            print(response_message)
 
         # Send the extracted info back to the user
         await update.message.reply_text(response_message, parse_mode="Markdown")
 
 async def handle_text(update: Update, context: CallbackContext) -> None:
-    # Do nothing for text messages without images
+    print("Received a text message without an image.")
     await update.message.reply_text("Please send an image of a Zoom invite.")
 
 def main():
