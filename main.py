@@ -1,6 +1,6 @@
 import os
 from telegram import Update
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
 
 # Load the API token from the environment variable
 API_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
@@ -8,28 +8,24 @@ API_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 if not API_TOKEN:
     raise ValueError("No TELEGRAM_BOT_TOKEN found in environment variables")
 
-def start(update: Update, context: CallbackContext) -> None:
-    update.message.reply_text('Hello! I am your ZoomLinkBot. Send me "abc" to see me in action.')
+async def start(update: Update, context: CallbackContext) -> None:
+    await update.message.reply_text('Hello! I am your ZoomLinkBot. Send me "abc" to see me in action.')
 
-def respond_to_abc(update: Update, context: CallbackContext) -> None:
+async def respond_to_abc(update: Update, context: CallbackContext) -> None:
     if 'abc' in update.message.text.lower():
-        update.message.reply_text('ABC')
+        await update.message.reply_text('ABC')
 
 def main():
-    updater = Updater(API_TOKEN)
-
-    dispatcher = updater.dispatcher
+    application = Application.builder().token(API_TOKEN).build()
 
     # Start command handler
-    dispatcher.add_handler(CommandHandler('start', start))
+    application.add_handler(CommandHandler('start', start))
 
     # Text message handler
-    dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, respond_to_abc))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, respond_to_abc))
 
     # Start the Bot
-    updater.start_polling()
-
-    updater.idle()
+    application.run_polling()
 
 if __name__ == '__main__':
     main()
