@@ -21,7 +21,7 @@ class ChatGPT:
                     {
                         "role": "user",
                         "content": [
-                            {"type": "text", "text": "Please extract the Zoom meeting ID and passcode from this image."},
+                            {"type": "text", "text": "Please extract the Zoom meeting ID, passcode and full join link from this image."},
                             {
                                 "type": "image_url",
                                 "image_url": {"url": image_url},
