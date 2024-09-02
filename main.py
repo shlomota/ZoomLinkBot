@@ -13,6 +13,7 @@ REQUIRED_PASSWORD = "ZoomLink613!"
 # Approved users list
 APPROVED_USERS_FILE = "approved_users.txt"
 
+
 # Load approved users from a file
 def load_approved_users():
     if os.path.exists(APPROVED_USERS_FILE):
@@ -20,7 +21,9 @@ def load_approved_users():
             return set(line.strip() for line in file)
     return set()
 
+
 approved_users = load_approved_users()
+
 
 # Save approved users to a file
 def save_approved_users():
@@ -28,24 +31,27 @@ def save_approved_users():
         for user_id in approved_users:
             file.write(f"{user_id}\n")
 
+
 # Check if user is approved before handling other commands
 def is_user_approved(update: Update) -> bool:
     user_id = str(update.message.from_user.id)
     return user_id in approved_users
 
+
 # Handle user approval via password
 async def handle_password(update: Update, context: CallbackContext) -> None:
     user_id = str(update.message.from_user.id)
-    if is_user_approved(update):
-        await update.message.reply_text("You are already approved to use this bot.")
+    password = update.message.text.strip()
+
+    if password == REQUIRED_PASSWORD:
+        approved_users.add(user_id)
+        save_approved_users()
+        await update.message.reply_text("Password accepted! You are now approved to use the bot.")
+        context.user_data['awaiting_password'] = False
     else:
-        password = update.message.text.strip()
-        if password == REQUIRED_PASSWORD:
-            approved_users.add(user_id)
-            save_approved_users()
-            await update.message.reply_text("Password accepted! You are now approved to use the bot.")
-        else:
-            await update.message.reply_text("Incorrect password. Please try again.")
+        await update.message.reply_text("Incorrect password. Please try again.")
+        context.user_data['awaiting_password'] = True
+
 
 # Start command handler
 async def start(update: Update, context: CallbackContext) -> None:
@@ -53,7 +59,9 @@ async def start(update: Update, context: CallbackContext) -> None:
         await update.message.reply_text("Please enter the password to use this bot:")
         context.user_data['awaiting_password'] = True
     else:
-        await update.message.reply_text('Hello! I am your ZoomLinkBot. Send me an image of a Zoom invite to extract the meeting link.')
+        await update.message.reply_text(
+            'Hello! I am your ZoomLinkBot. Send me an image of a Zoom invite to extract the meeting link.')
+
 
 # Handle image messages
 async def handle_image(update: Update, context: CallbackContext) -> None:
@@ -87,17 +95,18 @@ async def handle_image(update: Update, context: CallbackContext) -> None:
         # Send the extracted info back to the user
         await update.message.reply_text(response_message)
 
+
 # Handle text messages (password entry)
 async def handle_text(update: Update, context: CallbackContext) -> None:
-    if context.user_data.get('awaiting_password'):
+    if context.user_data.get('awaiting_password', False):
         await handle_password(update, context)
-        context.user_data['awaiting_password'] = False
     else:
         if not is_user_approved(update):
             await update.message.reply_text("Please enter the password to use this bot:")
             context.user_data['awaiting_password'] = True
         else:
             await update.message.reply_text("Please send an image of a Zoom invite.")
+
 
 def main():
     application = Application.builder().token(API_TOKEN).build()
@@ -113,6 +122,7 @@ def main():
 
     # Start the Bot
     application.run_polling()
+
 
 if __name__ == '__main__':
     main()
