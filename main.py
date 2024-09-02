@@ -7,13 +7,60 @@ from llm import ChatGPT
 API_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 chatgpt = ChatGPT()
 
-if not API_TOKEN:
-    raise ValueError("No TELEGRAM_BOT_TOKEN found in environment variables")
+# Password requirement
+REQUIRED_PASSWORD = "ZoomLink613!"
 
+# Approved users list
+APPROVED_USERS_FILE = "approved_users.txt"
+
+# Load approved users from a file
+def load_approved_users():
+    if os.path.exists(APPROVED_USERS_FILE):
+        with open(APPROVED_USERS_FILE, 'r') as file:
+            return set(line.strip() for line in file)
+    return set()
+
+approved_users = load_approved_users()
+
+# Save approved users to a file
+def save_approved_users():
+    with open(APPROVED_USERS_FILE, 'w') as file:
+        for user_id in approved_users:
+            file.write(f"{user_id}\n")
+
+# Check if user is approved before handling other commands
+def is_user_approved(update: Update) -> bool:
+    user_id = str(update.message.from_user.id)
+    return user_id in approved_users
+
+# Handle user approval via password
+async def handle_password(update: Update, context: CallbackContext) -> None:
+    user_id = str(update.message.from_user.id)
+    if is_user_approved(update):
+        await update.message.reply_text("You are already approved to use this bot.")
+    else:
+        password = update.message.text.strip()
+        if password == REQUIRED_PASSWORD:
+            approved_users.add(user_id)
+            save_approved_users()
+            await update.message.reply_text("Password accepted! You are now approved to use the bot.")
+        else:
+            await update.message.reply_text("Incorrect password. Please try again.")
+
+# Start command handler
 async def start(update: Update, context: CallbackContext) -> None:
-    await update.message.reply_text('Hello! I am your ZoomLinkBot. Send me an image of a Zoom invite to extract the meeting link.')
+    if not is_user_approved(update):
+        await update.message.reply_text("Please enter the password to use this bot:")
+        context.user_data['awaiting_password'] = True
+    else:
+        await update.message.reply_text('Hello! I am your ZoomLinkBot. Send me an image of a Zoom invite to extract the meeting link.')
 
+# Handle image messages
 async def handle_image(update: Update, context: CallbackContext) -> None:
+    if not is_user_approved(update):
+        await update.message.reply_text("You need to enter the password before using this bot. Use /start to begin.")
+        return
+
     print("Received an image.")
     if update.message.photo:
         # Get the largest image file (highest resolution)
@@ -21,17 +68,16 @@ async def handle_image(update: Update, context: CallbackContext) -> None:
         image_url = file.file_path
         print(f"Image URL: {image_url}")
 
-        # Use ChatGPT to extract and parse the Zoom link information
+        # Use ChatGPT to extract the Zoom link information
         try:
             zoom_info = chatgpt.extract_zoom_info(image_url)
             print(f"Extracted Zoom Info: {zoom_info}")
 
-            # Create a clickable Zoom link
-            clickable_link = f"[Join Zoom Meeting]({zoom_info.join_url})"
+            # Create the response message with the plain text link
             response_message = (
                 f"Meeting ID: {zoom_info.meeting_id}\n"
                 f"Passcode: {zoom_info.passcode}\n"
-                f"{clickable_link}"
+                f"Join Zoom Meeting: {zoom_info.join_url}"
             )
             print(f"Response Message: {response_message}")
         except Exception as e:
@@ -39,11 +85,19 @@ async def handle_image(update: Update, context: CallbackContext) -> None:
             print(response_message)
 
         # Send the extracted info back to the user
-        await update.message.reply_text(response_message, parse_mode="Markdown")
+        await update.message.reply_text(response_message)
 
+# Handle text messages (password entry)
 async def handle_text(update: Update, context: CallbackContext) -> None:
-    print("Received a text message without an image.")
-    await update.message.reply_text("Please send an image of a Zoom invite.")
+    if context.user_data.get('awaiting_password'):
+        await handle_password(update, context)
+        context.user_data['awaiting_password'] = False
+    else:
+        if not is_user_approved(update):
+            await update.message.reply_text("Please enter the password to use this bot:")
+            context.user_data['awaiting_password'] = True
+        else:
+            await update.message.reply_text("Please send an image of a Zoom invite.")
 
 def main():
     application = Application.builder().token(API_TOKEN).build()
