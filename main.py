@@ -1,8 +1,12 @@
+import os
 from telegram import Update
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
 
-# Your API token from BotFather
-API_TOKEN = 'YOUR_API_TOKEN'
+# Load the API token from the environment variable
+API_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
+
+if not API_TOKEN:
+    raise ValueError("No TELEGRAM_BOT_TOKEN found in environment variables")
 
 def start(update: Update, context: CallbackContext) -> None:
     update.message.reply_text('Hello! I am your ZoomLinkBot. Send me "abc" to see me in action.')
