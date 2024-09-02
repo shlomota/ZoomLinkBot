@@ -10,7 +10,7 @@ chatgpt = ChatGPT()
 # Password requirement
 REQUIRED_PASSWORD = "ZoomLink613!"
 
-# Approved users list
+# Approved users file
 APPROVED_USERS_FILE = "approved_users.txt"
 
 
@@ -18,8 +18,8 @@ APPROVED_USERS_FILE = "approved_users.txt"
 def load_approved_users():
     if os.path.exists(APPROVED_USERS_FILE):
         with open(APPROVED_USERS_FILE, 'r') as file:
-            return set(line.strip() for line in file)
-    return set()
+            return {line.strip().split(':')[0]: line.strip().split(':')[1] for line in file}
+    return {}
 
 
 approved_users = load_approved_users()
@@ -28,8 +28,8 @@ approved_users = load_approved_users()
 # Save approved users to a file
 def save_approved_users():
     with open(APPROVED_USERS_FILE, 'w') as file:
-        for user_id in approved_users:
-            file.write(f"{user_id}\n")
+        for user_id, username in approved_users.items():
+            file.write(f"{user_id}:{username}\n")
 
 
 # Check if user is approved before handling other commands
@@ -41,10 +41,11 @@ def is_user_approved(update: Update) -> bool:
 # Handle user approval via password
 async def handle_password(update: Update, context: CallbackContext) -> None:
     user_id = str(update.message.from_user.id)
+    username = update.message.from_user.username or "unknown"
     password = update.message.text.strip()
 
     if password == REQUIRED_PASSWORD:
-        approved_users.add(user_id)
+        approved_users[user_id] = username
         save_approved_users()
         await update.message.reply_text("Password accepted! You are now approved to use the bot.")
         context.user_data['awaiting_password'] = False
