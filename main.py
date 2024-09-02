@@ -1,20 +1,31 @@
-from flask import Flask, request
-from twilio.twiml.messaging_response import MessagingResponse
+from telegram import Update
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
 
-app = Flask(__name__)
+# Your API token from BotFather
+API_TOKEN = 'YOUR_API_TOKEN'
 
-@app.route('/webhook', methods=['POST'])
-def webhook():
-    incoming_msg = request.values.get('Body', '').lower()  # Get the message body and convert to lowercase
-    resp = MessagingResponse()
+def start(update: Update, context: CallbackContext) -> None:
+    update.message.reply_text('Hello! I am your ZoomLinkBot. Send me "abc" to see me in action.')
 
-    if 'abc' in incoming_msg:
-        resp.message("ABC")
-    else:
-        # Do nothing
-        pass
+def respond_to_abc(update: Update, context: CallbackContext) -> None:
+    if 'abc' in update.message.text.lower():
+        update.message.reply_text('ABC')
 
-    return str(resp)
+def main():
+    updater = Updater(API_TOKEN)
+
+    dispatcher = updater.dispatcher
+
+    # Start command handler
+    dispatcher.add_handler(CommandHandler('start', start))
+
+    # Text message handler
+    dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, respond_to_abc))
+
+    # Start the Bot
+    updater.start_polling()
+
+    updater.idle()
 
 if __name__ == '__main__':
-    app.run(host="0.0.0.0", debug=True)
+    main()
