@@ -1,12 +1,20 @@
+# llm.py
 from openai import OpenAI
+from pydantic import BaseModel
 import os
+
+# Define a structured output model for Zoom information
+class ZoomInfo(BaseModel):
+    meeting_id: str
+    passcode: str
+    join_url: str
 
 class ChatGPT:
     def __init__(self):
         self.client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
     def extract_zoom_info(self, image_url):
-        response = self.client.chat.completions.create(
+        completion = self.client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
                 {
@@ -22,4 +30,10 @@ class ChatGPT:
             ],
             max_tokens=300,
         )
-        return response.choices[0]['message']['content']
+        return completion.choices[0]['message']['content']
+
+    def parse_zoom_info(self, zoom_info_text):
+        try:
+            return ZoomInfo.parse_raw(zoom_info_text)
+        except Exception as e:
+            raise ValueError(f"Error parsing Zoom info: {str(e)}")
